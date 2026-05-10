@@ -79,7 +79,7 @@ export default function CatalogClient({ products, initialCategory = null }: Prop
           </h1>
           <p className="text-gray-300 text-sm max-w-xl">
             Browse our full lineup of equipment from the brands you trust. In Stock, On Order, and Available to Order.
-            Call us at <a href="tel:16032793322" className="text-white underline">(603) 279-3322</a> to check availability or place an order.
+            Call us at <a href="tel:16032797323" className="text-white underline">(603) 279-7323</a> to check availability or place an order.
           </p>
         </div>
       </div>
@@ -182,8 +182,8 @@ export default function CatalogClient({ products, initialCategory = null }: Prop
             We can source equipment from all the brands we carry. Give us a call or stop by — we&apos;re here to help.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="tel:16032793322" className="btn-primary justify-center">
-              Call (603) 279-3322
+            <a href="tel:16032797323" className="btn-primary justify-center">
+              Call (603) 279-7323
             </a>
             <a href="https://www.readyeq.com/contact-us" target="_blank" rel="noopener noreferrer" className="btn-secondary justify-center border-gray-500 text-white hover:bg-white/10">
               Send a Message
