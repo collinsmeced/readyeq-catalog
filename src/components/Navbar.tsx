@@ -7,10 +7,10 @@ export default function Navbar() {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-[72px] gap-4">
+        <div className="flex items-center justify-between h-[90px] gap-4">
 
           {/* Far left: contact icons */}
-          <div className="hidden lg:flex items-center gap-3 shrink-0">
+          <div className="hidden lg:flex flex-col items-center gap-2 shrink-0">
             <a href={`mailto:info@readyeq.com`} className="text-gray-500 hover:text-[#2563eb] transition-colors" aria-label="Email">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -38,7 +38,7 @@ export default function Navbar() {
               alt="Ready Equipment Outdoor Power"
               width={180}
               height={72}
-              className="h-14 w-auto object-contain"
+              className="h-20 w-auto object-contain"
               priority
             />
           </Link>

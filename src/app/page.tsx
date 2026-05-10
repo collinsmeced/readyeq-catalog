@@ -3,6 +3,7 @@ import type { Product } from '@/lib/types'
 import CatalogClient from '@/components/CatalogClient'
 
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 
 interface Props {
   searchParams: Promise<{ category?: string }>
