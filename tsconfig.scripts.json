@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "outDir": "./dist-scripts",
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["scripts/**/*.ts", "src/lib/**/*.ts"]
+}

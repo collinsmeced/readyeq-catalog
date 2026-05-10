@@ -1,0 +1,9 @@
+.env.local
+.env
+node_modules/
+.next/
+dist-scripts/
+*.xlsx
+*.csv
+tsconfig.tsbuildinfo
+next-env.d.ts
