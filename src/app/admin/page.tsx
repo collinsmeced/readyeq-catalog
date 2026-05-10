@@ -69,7 +69,7 @@ export default function AdminPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="bg-white border border-gray-200 rounded-xl p-8 w-full max-w-sm">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 bg-[#1d5fa0] flex items-center justify-center rounded-sm">
+            <div className="w-8 h-8 bg-[#0072bc] flex items-center justify-center rounded-sm">
               <span className="text-white font-black text-base">R</span>
             </div>
             <div>
@@ -84,7 +84,7 @@ export default function AdminPage() {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1d5fa0]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0072bc]"
                 placeholder="Enter admin password"
                 required
               />
@@ -104,7 +104,7 @@ export default function AdminPage() {
           <h1 className="text-2xl font-black text-gray-900">Admin — Catalog Import</h1>
           <p className="text-sm text-gray-500 mt-1">Upload your Flyntlok export to refresh inventory and add new products.</p>
         </div>
-        <a href="/" className="text-sm text-[#1d5fa0] hover:underline">View Catalog →</a>
+        <a href="/" className="text-sm text-[#0072bc] hover:underline">View Catalog →</a>
       </div>
 
       {/* Import card */}
@@ -113,7 +113,7 @@ export default function AdminPage() {
 
         <form onSubmit={handleImport} className="space-y-4">
           <div
-            className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center hover:border-[#1d5fa0] transition-colors cursor-pointer"
+            className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center hover:border-[#0072bc] transition-colors cursor-pointer"
             onClick={() => fileRef.current?.click()}
           >
             <input

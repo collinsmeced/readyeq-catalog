@@ -13,7 +13,7 @@ export default function ProductCard({ product }: Props) {
   const badgeColor = availabilityColor(product.availability)
 
   return (
-    <Link href={href} className="group block bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md hover:border-[#1d5fa0] transition-all duration-200">
+    <Link href={href} className="group block bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md hover:border-[#0072bc] transition-all duration-200">
 
       {/* Image */}
       <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
@@ -49,10 +49,10 @@ export default function ProductCard({ product }: Props) {
 
       {/* Content */}
       <div className="p-4">
-        <div className="text-xs font-semibold text-[#1d5fa0] uppercase tracking-wide mb-1">
+        <div className="text-xs font-semibold text-[#0072bc] uppercase tracking-wide mb-1">
           {product.make}
         </div>
-        <h3 className="font-bold text-gray-900 text-sm leading-snug mb-1 group-hover:text-[#1d5fa0] transition-colors line-clamp-2">
+        <h3 className="font-bold text-gray-900 text-sm leading-snug mb-1 group-hover:text-[#0072bc] transition-colors line-clamp-2">
           {product.display_name || `${product.make} ${product.model}`}
         </h3>
         <div className="text-xs text-gray-500 mb-3">Model: {product.model}</div>
@@ -67,7 +67,7 @@ export default function ProductCard({ product }: Props) {
           <span className="font-bold text-gray-900 text-sm">
             {formatPrice(product.list_price_cents)}
           </span>
-          <span className="text-xs font-semibold text-[#1d5fa0] group-hover:underline">
+          <span className="text-xs font-semibold text-[#0072bc] group-hover:underline">
             View Details →
           </span>
         </div>

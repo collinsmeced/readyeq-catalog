@@ -98,7 +98,7 @@ export default function CatalogClient({ products, initialCategory = null }: Prop
               placeholder="Search by brand, model, or type..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1d5fa0] focus:border-transparent"
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0072bc] focus:border-transparent"
             />
           </div>
 
@@ -106,7 +106,7 @@ export default function CatalogClient({ products, initialCategory = null }: Prop
           <select
             value={selectedMake || ''}
             onChange={e => setSelectedMake(e.target.value || null)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1d5fa0] bg-white text-gray-700"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0072bc] bg-white text-gray-700"
           >
             <option value="">All Brands</option>
             {makes.map(m => (
@@ -118,7 +118,7 @@ export default function CatalogClient({ products, initialCategory = null }: Prop
           <select
             value={availabilityFilter || ''}
             onChange={e => setAvailabilityFilter(e.target.value || null)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1d5fa0] bg-white text-gray-700"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0072bc] bg-white text-gray-700"
           >
             <option value="">All Availability</option>
             <option value="in_stock">In Stock</option>
@@ -152,7 +152,7 @@ export default function CatalogClient({ products, initialCategory = null }: Prop
                 setAvailabilityFilter(null)
                 setSearch('')
               }}
-              className="text-sm text-[#1d5fa0] hover:underline"
+              className="text-sm text-[#0072bc] hover:underline"
             >
               Clear filters
             </button>

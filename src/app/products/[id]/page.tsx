@@ -58,9 +58,9 @@ export default async function ProductPage({ params }: Props) {
 
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/" className="hover:text-[#1d5fa0]">All Products</Link>
+        <Link href="/" className="hover:text-[#0072bc]">All Products</Link>
         <span>/</span>
-        <Link href={`/?category=${encodeURIComponent(product.category)}`} className="hover:text-[#1d5fa0]">
+        <Link href={`/?category=${encodeURIComponent(product.category)}`} className="hover:text-[#0072bc]">
           {product.category}
         </Link>
         <span>/</span>
@@ -105,7 +105,7 @@ export default async function ProductPage({ params }: Props) {
 
         {/* Details */}
         <div>
-          <div className="text-sm font-semibold text-[#1d5fa0] uppercase tracking-wide mb-1">
+          <div className="text-sm font-semibold text-[#0072bc] uppercase tracking-wide mb-1">
             {product.make}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight mb-2">
@@ -178,7 +178,7 @@ export default async function ProductPage({ params }: Props) {
               <ul className="space-y-1.5">
                 {product.features.map((f, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                    <svg className="w-4 h-4 text-[#1d5fa0] mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-4 h-4 text-[#0072bc] mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                     {f}
@@ -192,7 +192,7 @@ export default async function ProductPage({ params }: Props) {
 
       {/* Back link */}
       <div className="mt-12 pt-8 border-t border-gray-200">
-        <Link href="/" className="text-sm text-[#1d5fa0] hover:underline flex items-center gap-1">
+        <Link href="/" className="text-sm text-[#0072bc] hover:underline flex items-center gap-1">
           ← Back to all products
         </Link>
       </div>

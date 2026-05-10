@@ -7,7 +7,7 @@ export default function Footer() {
     <footer className="mt-16">
 
       {/* Blue CTA bar */}
-      <div className="bg-[#2563eb] py-6 px-4">
+      <div className="bg-[#0072bc] py-6 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <h2 className="text-white font-black text-2xl">Have a Question?</h2>
@@ -30,7 +30,7 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6">
           {/* Location */}
           <div className="flex items-start gap-3">
-            <div className="text-[#2563eb] mt-0.5 shrink-0">
+            <div className="text-[#0072bc] mt-0.5 shrink-0">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -44,14 +44,14 @@ export default function Footer() {
 
           {/* Email */}
           <div className="flex items-start gap-3">
-            <div className="text-[#2563eb] mt-0.5 shrink-0">
+            <div className="text-[#0072bc] mt-0.5 shrink-0">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
             <div>
               <p className="font-bold text-gray-900 text-sm">Email</p>
-              <a href="mailto:info@readyeq.com" className="text-[#2563eb] text-sm hover:underline mt-0.5 block">
+              <a href="mailto:info@readyeq.com" className="text-[#0072bc] text-sm hover:underline mt-0.5 block">
                 info@readyeq.com
               </a>
             </div>
@@ -59,14 +59,14 @@ export default function Footer() {
 
           {/* Phone */}
           <div className="flex items-start gap-3">
-            <div className="text-[#2563eb] mt-0.5 shrink-0">
+            <div className="text-[#0072bc] mt-0.5 shrink-0">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
             </div>
             <div>
               <p className="font-bold text-gray-900 text-sm">Call</p>
-              <a href="tel:16032797323" className="text-gray-600 text-sm hover:text-[#2563eb] mt-0.5 block">
+              <a href="tel:16032797323" className="text-gray-600 text-sm hover:text-[#0072bc] mt-0.5 block">
                 603-279-7323
               </a>
             </div>
@@ -117,28 +117,28 @@ export default function Footer() {
 
           {/* Navigation */}
           <div>
-            <h3 className="font-black text-[#2563eb] text-sm uppercase tracking-wider mb-4">Navigation</h3>
+            <h3 className="font-black text-[#0072bc] text-sm uppercase tracking-wider mb-4">Navigation</h3>
             <ul className="space-y-2 text-sm text-gray-600">
-              <li><a href={MAIN_SITE} className="hover:text-[#2563eb] transition-colors">Home</a></li>
-              <li><a href={`${MAIN_SITE}/about`} className="hover:text-[#2563eb] transition-colors">About</a></li>
-              <li><a href={`${MAIN_SITE}/blog`} className="hover:text-[#2563eb] transition-colors">Blog</a></li>
-              <li><a href={`${MAIN_SITE}/contact-us`} className="hover:text-[#2563eb] transition-colors">Contact us</a></li>
+              <li><a href={MAIN_SITE} className="hover:text-[#0072bc] transition-colors">Home</a></li>
+              <li><a href={`${MAIN_SITE}/about`} className="hover:text-[#0072bc] transition-colors">About</a></li>
+              <li><a href={`${MAIN_SITE}/blog`} className="hover:text-[#0072bc] transition-colors">Blog</a></li>
+              <li><a href={`${MAIN_SITE}/contact-us`} className="hover:text-[#0072bc] transition-colors">Contact us</a></li>
             </ul>
           </div>
 
           {/* Services */}
           <div>
-            <h3 className="font-black text-[#2563eb] text-sm uppercase tracking-wider mb-4">Services</h3>
+            <h3 className="font-black text-[#0072bc] text-sm uppercase tracking-wider mb-4">Services</h3>
             <ul className="space-y-2 text-sm text-gray-600">
-              <li><a href="/" className="hover:text-[#2563eb] transition-colors font-medium">Sales</a></li>
-              <li><a href={`${MAIN_SITE}/rentals`} className="hover:text-[#2563eb] transition-colors">Rental</a></li>
-              <li><a href={`${MAIN_SITE}/parts-service`} className="hover:text-[#2563eb] transition-colors">Parts &amp; Service</a></li>
+              <li><a href="/" className="hover:text-[#0072bc] transition-colors font-medium">Sales</a></li>
+              <li><a href={`${MAIN_SITE}/rentals`} className="hover:text-[#0072bc] transition-colors">Rental</a></li>
+              <li><a href={`${MAIN_SITE}/parts-service`} className="hover:text-[#0072bc] transition-colors">Parts &amp; Service</a></li>
             </ul>
           </div>
 
           {/* Hours */}
           <div>
-            <h3 className="font-black text-[#2563eb] text-sm uppercase tracking-wider mb-4">Hours</h3>
+            <h3 className="font-black text-[#0072bc] text-sm uppercase tracking-wider mb-4">Hours</h3>
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex justify-between gap-4">
                 <span>Mon - Fri</span>
