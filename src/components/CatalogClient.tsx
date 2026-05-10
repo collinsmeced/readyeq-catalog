@@ -71,20 +71,27 @@ export default function CatalogClient({ products, initialCategory = null }: Prop
 
   return (
     <div>
-      {/* Hero banner */}
-      <div className="bg-[#0F1827] text-white py-10 px-4">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight mb-2">
-            Sales Catalog
-          </h1>
-          <p className="text-gray-300 text-sm max-w-xl">
-            Browse our full lineup of equipment from the brands you trust. In Stock, On Order, and Available to Order.
-            Call us at <a href="tel:16032797323" className="text-white underline">(603) 279-7323</a> to check availability or place an order.
-          </p>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Hero banner — contained blue box, same width as product grid */}
+        <div className="bg-[#0072bc] rounded-xl p-8 text-center text-white mb-8">
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-3">
+            Outdoor Power Equipment &amp; Contractor Equipment
+          </h1>
+          <p className="text-blue-100 text-sm mb-6 max-w-lg mx-auto">
+            Browse our full lineup from the brands you trust. In Stock, On Order, and Available to Order.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="tel:16032797323"
+               className="inline-flex items-center justify-center gap-2 bg-white text-[#0072bc] font-bold px-6 py-3 rounded hover:bg-gray-100 transition-colors">
+              Call (603) 279-7323
+            </a>
+            <a href="sms:16032797323"
+               className="inline-flex items-center justify-center gap-2 border-2 border-white text-white font-bold px-6 py-3 rounded hover:bg-white/10 transition-colors">
+              Text (603) 279-7323
+            </a>
+          </div>
+        </div>
 
         {/* Search + filters row */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
