@@ -7,7 +7,7 @@ export default function Navbar() {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-[90px] gap-4">
+        <div className="flex items-center justify-between py-5 gap-4">
 
           {/* Far left: contact icons */}
           <div className="hidden lg:flex flex-col items-center gap-2 shrink-0">
@@ -24,7 +24,7 @@ export default function Navbar() {
           </div>
 
           {/* Left nav */}
-          <nav className="hidden lg:flex items-center gap-5 text-sm font-medium text-gray-700 shrink-0">
+          <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-gray-700 shrink-0">
             <a href={MAIN_SITE} className="hover:text-[#0072bc] transition-colors">Home</a>
             <a href={`${MAIN_SITE}/rentals`} className="hover:text-[#0072bc] transition-colors">Rentals</a>
             <Link href="/" className="text-[#0072bc] font-semibold border-b-2 border-[#0072bc] pb-0.5">Sales</Link>
@@ -44,7 +44,7 @@ export default function Navbar() {
           </Link>
 
           {/* Right nav */}
-          <nav className="hidden lg:flex items-center gap-5 text-sm font-medium text-gray-700 shrink-0">
+          <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-gray-700 shrink-0">
             <a href={`${MAIN_SITE}/about`} className="hover:text-[#0072bc] transition-colors">About</a>
             <a href={`${MAIN_SITE}/blog`} className="hover:text-[#0072bc] transition-colors">Blog</a>
             <a href={`${MAIN_SITE}/resources`} className="hover:text-[#0072bc] transition-colors">Resources</a>

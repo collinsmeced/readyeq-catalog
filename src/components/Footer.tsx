@@ -26,7 +26,7 @@ export default function Footer() {
       </div>
 
       {/* Contact info strip */}
-      <div className="bg-white border-b-4 border-gray-800 py-6 px-4">
+      <div className="bg-white border-b-4 border-gray-800 py-4 px-4">
         <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6">
           {/* Location */}
           <div className="flex items-start gap-3">
@@ -75,7 +75,7 @@ export default function Footer() {
       </div>
 
       {/* Main footer */}
-      <div className="bg-white py-10 px-4">
+      <div className="bg-white py-8 px-4">
         <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
 
           {/* Brand */}
