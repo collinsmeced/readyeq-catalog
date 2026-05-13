@@ -17,3 +17,5 @@ next-env.d.ts
 sample-candidates.json
 test-enrichment-results-*.json
 
+.vercel
+bulk-enrich.log

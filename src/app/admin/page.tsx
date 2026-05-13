@@ -104,7 +104,10 @@ export default function AdminPage() {
           <h1 className="text-2xl font-black text-gray-900">Admin — Catalog Import</h1>
           <p className="text-sm text-gray-500 mt-1">Upload your Flyntlok export to refresh inventory and add new products.</p>
         </div>
-        <a href="/" className="text-sm text-[#0072bc] hover:underline">View Catalog →</a>
+        <div className="flex items-center gap-4">
+          <a href="/admin/review" className="text-sm text-[#0072bc] hover:underline font-semibold">Review Queue →</a>
+          <a href="/" className="text-sm text-gray-500 hover:text-[#0072bc]">View Catalog →</a>
+        </div>
       </div>
 
       {/* Import card */}
