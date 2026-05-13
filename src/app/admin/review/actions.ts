@@ -5,6 +5,13 @@ import { requireAdmin } from '@/lib/auth-cookie'
 import { db } from '@/lib/db'
 import { enrichProduct, passesAutoApprovalGate, type Enrichment } from '@/lib/enrichment'
 
+// Vercel server actions inherit the timeout of the page they're called from.
+// Re-enrichment can take 60–120s on Claude (web search + fetch + extract).
+// Push the limit up so pull-from-URL doesn't get killed mid-flight.
+// Hobby = max 60s, Pro = max 300s, Enterprise = max 900s.
+// We set 300 here; on Hobby it gets clamped to 60 automatically.
+export const maxDuration = 300
+
 // ─── Approve ─────────────────────────────────────────────────────────────
 // Marks product approved + active. Used both for "looks good as-is" and
 // after edits — actually if there were edits, the save action ran first.
