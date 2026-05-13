@@ -18,7 +18,7 @@ export default async function HomePage({ searchParams }: Props) {
     .select('*')
     .eq('is_active', true)
     .order('make', { ascending: true })
-    .order('model', { ascending: true })
+    .order('part_number', { ascending: true })
 
   if (error) {
     console.error('Failed to load products:', error)
