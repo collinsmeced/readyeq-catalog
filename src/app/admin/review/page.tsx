@@ -6,6 +6,11 @@ import AdminLogin from './AdminLogin'
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
 
+// Server actions invoked from this route can take 60–120s (Claude web_search
+// + web_fetch + extract). Default Vercel timeout is 60s on Pro / 10s on Hobby.
+// 300 = max for Pro; Vercel auto-clamps to plan ceiling on lower tiers.
+export const maxDuration = 300
+
 export const metadata = {
   title: 'Review Queue · Ready Equipment Admin',
 }
