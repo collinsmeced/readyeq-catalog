@@ -169,14 +169,32 @@ export async function enrichProduct(input: EnrichmentInput): Promise<EnrichmentR
   const startingUrlBlock = input.starting_url
     ? `
 
-⚠ A REVIEWER HAS PROVIDED A STARTING URL — use it FIRST:
-  ${input.starting_url}
+⚠ MANUAL OVERRIDE — REVIEWER-PROVIDED URL: ${input.starting_url}
 
-Use web_fetch on this URL before doing any web searches. This URL is your
-primary candidate. If you can verify the part_number "${input.part_number}"
-on that page, extract from it. If the page does not contain that part_number
-verbatim, you may then fall back to web_search to find the right page (still
-respecting Rule 1 — do not substitute a different SKU).`
+A human reviewer has manually verified that this URL is the correct
+manufacturer page for this SKU. This OVERRIDES the normal flow:
+
+1. Use web_fetch on this URL. DO NOT search for alternatives.
+2. Extract all fields per the schema FROM THIS PAGE — even if the
+   user's part_number "${input.part_number}" does NOT appear verbatim
+   on the page. Many dealer SKUs are variants of a manufacturer's base
+   model (e.g. "SRM-2620-2A" maps to Echo's "SRM-2620" page; "77502-A"
+   maps to Toro's "77502" page). The reviewer has accepted this mapping.
+3. Rule 1 (no SKU substitution) is **RELAXED** for this override —
+   substitute the manufacturer's marketing data confidently.
+4. In confidence_notes, state:
+   - If "${input.part_number}" appears verbatim on the page →
+     "User-provided URL verified — part_number matches."
+   - If it does NOT appear verbatim →
+     "User-provided URL is for the [manufacturer's SKU/name]; user's
+     part_number ${input.part_number} appears to be a dealer variant.
+     Reviewer has accepted this mapping."
+5. Set confidence:
+   - "high" if part_number matches verbatim on the page
+   - "medium" if it does not (variant mapping accepted by reviewer)
+   - "low" only if the page itself contains nothing extractable
+
+All other rules (specs from page only, image extraction, etc.) still apply.`
     : ''
 
   const userMessage = `Enrich this product:
