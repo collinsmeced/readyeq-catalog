@@ -164,31 +164,55 @@ export default function ReviewWorkspace({ queue: initialQueue, totals: initialTo
     })
   }, [selected, pending, hasEdits, edits])
 
+  // Shared core: runs reenrichProduct, then either auto-advances (if it
+  // got approved/flagged) or refreshes the in-queue row.
+  const runReenrich = useCallback((opts: { starting_url?: string }) => {
+    if (!selected || pending) return
+    const label = opts.starting_url
+      ? `Pulling fresh data from your URL (~30–60s)…`
+      : `Re-enriching ${selected.make} ${selected.part_number} (~30–90s)…`
+    setFlash({ kind: 'info', text: label })
+    startTransition(async () => {
+      const r = await reenrichProduct(selected.id, opts.starting_url ? { starting_url: opts.starting_url } : undefined)
+      if (!r.ok) { setFlash({ kind: 'error', text: r.error || 'reenrich failed' }); return }
+      const fresh = await loadProduct(selected.id)
+      if (!fresh) return
+      if (fresh.review_status === 'approved') {
+        setFlash({ kind: 'success', text: `Auto-approved (${r.result?.confidence}, gate passed)` })
+        removeAndAdvance(selected.id, { from: selected.review_status, to: 'approved' })
+      } else if (fresh.review_status === 'flagged') {
+        setFlash({ kind: 'info', text: 'Marked discontinued — moved to flagged' })
+        removeAndAdvance(selected.id, { from: selected.review_status, to: 'flagged' })
+      } else {
+        setQueue(q => q.map(p => p.id === selected.id ? fresh : p))
+        setFlash({ kind: 'info', text: `Updated: confidence ${r.result?.confidence}, ${r.result?.passesGate ? 'gate passed' : 'gate failed — still for review'}` })
+      }
+    })
+  }, [selected, pending, removeAndAdvance])
+
   const doReenrich = useCallback(() => {
     if (!selected || pending) return
     const yes = confirm(`Re-run Claude enrichment on ${selected.make} ${selected.part_number}? Takes ~30–90 seconds. Will overwrite non-human-edited fields with fresh data.`)
     if (!yes) return
-    setFlash({ kind: 'info', text: `Re-enriching ${selected.make} ${selected.part_number} (~30–90s)…` })
-    startTransition(async () => {
-      const r = await reenrichProduct(selected.id)
-      if (!r.ok) { setFlash({ kind: 'error', text: r.error || 'reenrich failed' }); return }
-      // Reload the product
-      const fresh = await loadProduct(selected.id)
-      if (fresh) {
-        if (fresh.review_status === 'approved') {
-          // Auto-approved on this pass! Remove from queue.
-          setFlash({ kind: 'success', text: `Re-enriched and auto-approved (${r.result?.confidence}, gate passed)` })
-          removeAndAdvance(selected.id, { from: selected.review_status, to: 'approved' })
-        } else if (fresh.review_status === 'flagged') {
-          setFlash({ kind: 'info', text: 'Re-enriched: marked discontinued, moved to flagged' })
-          removeAndAdvance(selected.id, { from: selected.review_status, to: 'flagged' })
-        } else {
-          setQueue(q => q.map(p => p.id === selected.id ? fresh : p))
-          setFlash({ kind: 'info', text: `Re-enriched: confidence ${r.result?.confidence}, ${r.result?.passesGate ? 'gate passed' : 'gate failed — still for review'}` })
-        }
+    runReenrich({})
+  }, [selected, pending, runReenrich])
+
+  const doPullFromUrl = useCallback((url: string) => {
+    if (!selected || pending) return
+    const trimmed = url.trim()
+    if (!trimmed) return
+    try {
+      const u = new URL(trimmed)
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') {
+        setFlash({ kind: 'error', text: 'URL must start with http(s)://' })
+        return
       }
-    })
-  }, [selected, pending, removeAndAdvance])
+    } catch {
+      setFlash({ kind: 'error', text: 'That doesn\'t look like a valid URL' })
+      return
+    }
+    runReenrich({ starting_url: trimmed })
+  }, [selected, pending, runReenrich])
 
   // ─── Find any product (escape hatch) ────────────────────────────────
   useEffect(() => {
@@ -312,6 +336,7 @@ export default function ReviewWorkspace({ queue: initialQueue, totals: initialTo
                 onFlag={doFlag}
                 onSave={doSave}
                 onReenrich={doReenrich}
+                onPullFromUrl={doPullFromUrl}
                 pending={pending}
                 hasEdits={hasEdits}
               />
@@ -443,7 +468,7 @@ function EmptyState() {
 // ─── Product detail ─────────────────────────────────────────────────────
 function ProductDetail({
   product, edits, onEdit, index, total,
-  onPrev, onNext, onApprove, onReject, onFlag, onSave, onReenrich,
+  onPrev, onNext, onApprove, onReject, onFlag, onSave, onReenrich, onPullFromUrl,
   pending, hasEdits,
 }: {
   product: QueueItem
@@ -453,8 +478,11 @@ function ProductDetail({
   onPrev: () => void; onNext: () => void
   onApprove: () => void; onReject: () => void; onFlag: () => void
   onSave: () => void; onReenrich: () => void
+  onPullFromUrl: (url: string) => void
   pending: boolean; hasEdits: boolean
 }) {
+  const [pullUrl, setPullUrl] = useState('')
+  const [showPullInput, setShowPullInput] = useState(false)
   const effective = (k: keyof EditableFields): any => (edits as any)[k] !== undefined ? (edits as any)[k] : (product as any)[k]
   const set = (k: keyof EditableFields, v: any) => onEdit({ ...edits, [k]: v })
 
@@ -622,8 +650,14 @@ function ProductDetail({
               onClick={onReenrich}
               disabled={pending}
               className="text-xs px-3 py-1.5 rounded border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-              title="Re-run Claude enrichment"
+              title="Re-run Claude enrichment (open web search)"
             >↻ Re-enrich</button>
+            <button
+              onClick={() => setShowPullInput(s => !s)}
+              disabled={pending}
+              className={`text-xs px-3 py-1.5 rounded border disabled:opacity-40 ${showPullInput ? 'bg-blue-50 border-[#0072bc] text-[#0072bc]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+              title="Paste a URL to extract from a specific page"
+            >🔗 From URL</button>
             {hasEdits && (
               <button
                 onClick={onSave}
@@ -648,6 +682,50 @@ function ProductDetail({
             >Next →</button>
           </div>
         </div>
+        {showPullInput && (
+          <div className="mt-3 pt-3 border-t border-gray-200 bg-white -mx-6 px-6 pb-3 rounded-b-xl">
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
+              Pull data from a specific URL
+            </label>
+            <p className="text-[11px] text-gray-500 mb-2">
+              Paste the manufacturer's product page URL for <span className="font-mono">{product.part_number}</span>. Claude will fetch that page directly instead of searching. Auto-approval gate still applies (URL must be on the brand's official domain).
+            </p>
+            <form
+              className="flex items-center gap-2"
+              onSubmit={e => {
+                e.preventDefault()
+                onPullFromUrl(pullUrl)
+                setPullUrl('')
+                setShowPullInput(false)
+              }}
+            >
+              <input
+                type="url"
+                value={pullUrl}
+                onChange={e => setPullUrl(e.target.value)}
+                placeholder="https://www.toro.com/en/product/77502"
+                autoFocus
+                disabled={pending}
+                className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#0072bc] focus:border-transparent disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={pending || !pullUrl.trim()}
+                className="text-xs px-3 py-1.5 rounded bg-[#0072bc] text-white hover:bg-[#005b95] font-semibold disabled:opacity-40 inline-flex items-center gap-1"
+              >
+                ↻ Pull
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowPullInput(false); setPullUrl('') }}
+                disabled={pending}
+                className="text-xs px-2 py-1.5 text-gray-500 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        )}
         <div className="mt-2 text-[11px] text-gray-400 text-right">
           <kbd className="font-mono">J</kbd>/<kbd className="font-mono">K</kbd> next/prev · <kbd className="font-mono">A</kbd> approve · <kbd className="font-mono">F</kbd> flag · <kbd className="font-mono">R</kbd> reject · <kbd className="font-mono">⌘S</kbd> save · <kbd className="font-mono">/</kbd> find
         </div>

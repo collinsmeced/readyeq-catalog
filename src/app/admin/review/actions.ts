@@ -141,7 +141,10 @@ export async function saveEdits(
 // ─── Re-enrich ───────────────────────────────────────────────────────────
 // Re-runs the v1.4 Claude pipeline on this one product. Writes results
 // the same way bulk-enrich does (auto-approves if it now passes the gate).
-export async function reenrichProduct(productId: string): Promise<{
+export async function reenrichProduct(
+  productId: string,
+  options?: { starting_url?: string },
+): Promise<{
   ok: boolean
   error?: string
   result?: { confidence: string; passesGate: boolean; reviewStatus: string }
@@ -169,7 +172,7 @@ export async function reenrichProduct(productId: string): Promise<{
     if (rows.length === 0) return { ok: false, error: 'product not found' }
     const row = rows[0]
 
-    // 2. Call Claude
+    // 2. Call Claude (optionally with a user-provided starting URL)
     const result = await enrichProduct({
       make: row.make,
       part_number: row.part_number,
@@ -177,6 +180,7 @@ export async function reenrichProduct(productId: string): Promise<{
       price_cents: row.list_price_cents,
       brand_domain: row.brand_domain || null,
       trusted_domain: !!row.brand_domain,
+      starting_url: options?.starting_url,
     })
 
     // 3. Decide write — mirrors scripts/bulk-enrich.ts decideWrite()

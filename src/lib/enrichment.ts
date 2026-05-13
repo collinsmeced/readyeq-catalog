@@ -123,6 +123,7 @@ export interface EnrichmentInput {
   price_cents?: number
   brand_domain?: string | null  // pre-resolved via resolveBrandDomain()
   trusted_domain?: boolean      // true if brand_domain comes from manufacturer_brands
+  starting_url?: string         // user-pasted URL to fetch FIRST before searching
 }
 
 export interface EnrichmentResult {
@@ -165,13 +166,26 @@ export async function enrichProduct(input: EnrichmentInput): Promise<EnrichmentR
     ? `$${(input.price_cents / 100).toFixed(0)}`
     : 'unknown'
 
+  const startingUrlBlock = input.starting_url
+    ? `
+
+⚠ A REVIEWER HAS PROVIDED A STARTING URL — use it FIRST:
+  ${input.starting_url}
+
+Use web_fetch on this URL before doing any web searches. This URL is your
+primary candidate. If you can verify the part_number "${input.part_number}"
+on that page, extract from it. If the page does not contain that part_number
+verbatim, you may then fall back to web_search to find the right page (still
+respecting Rule 1 — do not substitute a different SKU).`
+    : ''
+
   const userMessage = `Enrich this product:
 
 - Make:           ${input.make}
 - Part number:    ${input.part_number}
 - Category hint:  ${input.category_hint || '(none)'}  (from dealer inventory; coarse)
 - Dealer price:   ${price}              (sanity-check only)
-- Brand domain:   ${input.brand_domain ?? '(unknown — search the web freely for the manufacturer)'}
+- Brand domain:   ${input.brand_domain ?? '(unknown — search the web freely for the manufacturer)'}${startingUrlBlock}
 
 Find the manufacturer page and extract per the system instructions. Return ONLY the JSON object.`
 
