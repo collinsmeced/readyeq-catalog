@@ -172,26 +172,37 @@ export async function enrichProduct(input: EnrichmentInput): Promise<EnrichmentR
 ⚠ MANUAL OVERRIDE — REVIEWER-PROVIDED URL: ${input.starting_url}
 
 A human reviewer has manually verified that this URL is the correct
-manufacturer page for this SKU. This OVERRIDES the normal flow:
+page for this SKU. This OVERRIDES the normal flow AND all website rules:
 
-1. Use web_fetch on this URL. DO NOT search for alternatives.
-2. Extract all fields per the schema FROM THIS PAGE — even if the
-   user's part_number "${input.part_number}" does NOT appear verbatim
-   on the page. Many dealer SKUs are variants of a manufacturer's base
-   model (e.g. "SRM-2620-2A" maps to Echo's "SRM-2620" page; "77502-A"
-   maps to Toro's "77502" page). The reviewer has accepted this mapping.
-3. Rule 1 (no SKU substitution) is **RELAXED** for this override —
-   substitute the manufacturer's marketing data confidently.
-4. In confidence_notes, state:
+1. Use web_fetch on this exact URL. DO NOT search for alternatives.
+   DO NOT use web_search at all — this is a fetch-only override.
+2. The URL can be on ANY website — manufacturer's site, dealer page,
+   archived spec sheet, regional subdomain, third-party catalog,
+   anywhere. ALL website restrictions are waived for this override.
+   The reviewer has chosen this URL deliberately.
+3. Extract all fields per the schema FROM THE FETCHED PAGE — even if
+   the user's part_number "${input.part_number}" does NOT appear
+   verbatim on the page. Many dealer SKUs are variants of a base model
+   (e.g. "SRM-2620-2A" maps to Echo's "SRM-2620"; "77502-A" maps to
+   Toro's "77502"). The reviewer has accepted this mapping.
+4. Rule 1 (no SKU substitution) is **RELAXED** for this override —
+   confidently use whatever name, specs, description, and image the
+   fetched page provides.
+5. In confidence_notes, state:
    - If "${input.part_number}" appears verbatim on the page →
      "User-provided URL verified — part_number matches."
    - If it does NOT appear verbatim →
-     "User-provided URL is for the [manufacturer's SKU/name]; user's
+     "User-provided URL is for [manufacturer's SKU/name]; user's
      part_number ${input.part_number} appears to be a dealer variant.
      Reviewer has accepted this mapping."
-5. Set confidence:
-   - "high" if part_number matches verbatim on the page
-   - "medium" if it does not (variant mapping accepted by reviewer)
+   - If the URL is not the manufacturer's official site (e.g. a dealer
+     or third-party catalog), additionally state:
+     "Source is non-manufacturer ([domain]). Reviewer has accepted it."
+6. Set confidence:
+   - "high" if part_number matches verbatim AND source is the brand's
+     manufacturer domain
+   - "medium" if either condition above is missing (variant mapping
+     OR non-manufacturer source)
    - "low" only if the page itself contains nothing extractable
 
 All other rules (specs from page only, image extraction, etc.) still apply.`
@@ -207,19 +218,26 @@ All other rules (specs from page only, image extraction, etc.) still apply.`
 
 Find the manufacturer page and extract per the system instructions. Return ONLY the JSON object.`
 
-  const webSearchTool: any = {
-    type: 'web_search_20260209',
-    name: 'web_search',
-    max_uses: 3,
+  // For manual-URL overrides, drop web_search entirely so the model can't
+  // be tempted to look elsewhere. Only web_fetch with no domain restrictions.
+  const tools: any[] = []
+  if (!input.starting_url) {
+    const webSearchTool: any = {
+      type: 'web_search_20260209',
+      name: 'web_search',
+      max_uses: 3,
+    }
+    if (input.brand_domain && input.trusted_domain) {
+      webSearchTool.allowed_domains = [input.brand_domain]
+    }
+    tools.push(webSearchTool)
   }
-  if (input.brand_domain && input.trusted_domain) {
-    webSearchTool.allowed_domains = [input.brand_domain]
-  }
-  const webFetchTool: any = {
+  tools.push({
     type: 'web_fetch_20260209',
     name: 'web_fetch',
-    max_uses: 2,
-  }
+    max_uses: input.starting_url ? 3 : 2,  // a bit more headroom for override
+    // No allowed_domains — fetch any URL when overriding, brand or otherwise.
+  })
 
   // Streaming + manual JSON parse — matches v1.4 test script exactly
   const stream = anthropic.messages.stream({
@@ -230,7 +248,7 @@ Find the manufacturer page and extract per the system instructions. Return ONLY 
     system: [
       { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } } as any,
     ],
-    tools: [webSearchTool, webFetchTool],
+    tools: tools,
     messages: [{ role: 'user', content: userMessage }],
   } as any)
 
