@@ -47,6 +47,15 @@ export default function ReviewWorkspace({ queue: initialQueue, totals: initialTo
   const [edits, setEdits] = useState<EditableFields>({})
   const [flash, setFlash] = useState<{ kind: 'success' | 'error' | 'info'; text: string } | null>(null)
   const [pending, startTransition] = useTransition()
+  // Per-product processing state — async work (re-enrich, pull-from-URL)
+  // runs without blocking the rest of the UI. The set holds IDs of in-flight
+  // products; their sidebar entries show a spinner, the workspace shows a
+  // banner if you're viewing one of them.
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
+  // After async enrichment completes, the product gets a "fresh data" badge
+  // so you can find it in the queue and re-review it. Cleared when you click
+  // through to that product.
+  const [readyIds, setReadyIds] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState<Awaited<ReturnType<typeof findProduct>>>([])
   const [showSearch, setShowSearch] = useState(false)
@@ -72,6 +81,13 @@ export default function ReviewWorkspace({ queue: initialQueue, totals: initialTo
     }
     setEdits({})
     setSelectedId(newId)
+    // Clear the "ready for re-review" badge when the user actually looks at it
+    if (newId) {
+      setReadyIds(s => {
+        if (!s.has(newId)) return s
+        const n = new Set(s); n.delete(newId); return n
+      })
+    }
   }, [hasEdits])
 
   const goNext = useCallback(() => {
@@ -164,41 +180,81 @@ export default function ReviewWorkspace({ queue: initialQueue, totals: initialTo
     })
   }, [selected, pending, hasEdits, edits])
 
-  // Shared core: runs reenrichProduct, then either auto-advances (if it
-  // got approved/flagged) or refreshes the in-queue row.
-  const runReenrich = useCallback((opts: { starting_url?: string }) => {
-    if (!selected || pending) return
-    const label = opts.starting_url
-      ? `Pulling fresh data from your URL (~30–60s)…`
-      : `Re-enriching ${selected.make} ${selected.part_number} (~30–90s)…`
-    setFlash({ kind: 'info', text: label })
-    startTransition(async () => {
-      const r = await reenrichProduct(selected.id, opts.starting_url ? { starting_url: opts.starting_url } : undefined)
-      if (!r.ok) { setFlash({ kind: 'error', text: r.error || 'reenrich failed' }); return }
-      const fresh = await loadProduct(selected.id)
-      if (!fresh) return
-      if (fresh.review_status === 'approved') {
-        setFlash({ kind: 'success', text: `Auto-approved (${r.result?.confidence}, gate passed)` })
-        removeAndAdvance(selected.id, { from: selected.review_status, to: 'approved' })
-      } else if (fresh.review_status === 'flagged') {
-        setFlash({ kind: 'info', text: 'Marked discontinued — moved to flagged' })
-        removeAndAdvance(selected.id, { from: selected.review_status, to: 'flagged' })
-      } else {
-        setQueue(q => q.map(p => p.id === selected.id ? fresh : p))
-        setFlash({ kind: 'info', text: `Updated: confidence ${r.result?.confidence}, ${r.result?.passesGate ? 'gate passed' : 'gate failed — still for review'}` })
-      }
+  // Fire-and-forget enrichment. Doesn't block the UI — user can navigate to
+  // other products and act on them while this one cooks in the background.
+  // When it completes, the product gets a "✨ fresh data" badge in the
+  // sidebar (or moves to approved/flagged if the gate caught it).
+  const runReenrichBackground = useCallback((productId: string, label: string, opts: { starting_url?: string }) => {
+    // Snapshot the current row so we know what review_status to decrement from
+    const startRow = queue.find(p => p.id === productId)
+    const startStatus = startRow?.review_status
+
+    setProcessingIds(s => { const n = new Set(s); n.add(productId); return n })
+    setFlash({
+      kind: 'info',
+      text: opts.starting_url
+        ? `Pulling fresh data for ${label} from your URL — keep working`
+        : `Re-enriching ${label} in the background — keep working`,
     })
-  }, [selected, pending, removeAndAdvance])
+
+    ;(async () => {
+      try {
+        const r = await reenrichProduct(productId, opts.starting_url ? { starting_url: opts.starting_url } : undefined)
+        const fresh = await loadProduct(productId)
+
+        setProcessingIds(s => { const n = new Set(s); n.delete(productId); return n })
+
+        if (!r.ok || !fresh) {
+          setFlash({ kind: 'error', text: `${label}: ${r.error || 'enrichment failed'}` })
+          return
+        }
+
+        if (fresh.review_status === 'approved') {
+          setQueue(q => q.filter(p => p.id !== productId))
+          setTotals(t => ({
+            ...t,
+            [startStatus ?? 'enriched']: Math.max(0, (t[startStatus ?? 'enriched'] ?? 0) - 1),
+            approved: (t.approved ?? 0) + 1,
+          }))
+          setFlash({ kind: 'success', text: `✓ ${label} auto-approved (${r.result?.confidence})` })
+        } else if (fresh.review_status === 'flagged') {
+          setQueue(q => q.filter(p => p.id !== productId))
+          setTotals(t => ({
+            ...t,
+            [startStatus ?? 'enriched']: Math.max(0, (t[startStatus ?? 'enriched'] ?? 0) - 1),
+            flagged: (t.flagged ?? 0) + 1,
+          }))
+          setFlash({ kind: 'info', text: `${label}: discontinued, moved to flagged` })
+        } else {
+          // Updated, still in queue — flag it as "ready for re-review"
+          setQueue(q => q.map(p => p.id === productId ? fresh : p))
+          setReadyIds(s => { const n = new Set(s); n.add(productId); return n })
+          setFlash({
+            kind: 'success',
+            text: `✨ ${label} ready for re-review (confidence: ${r.result?.confidence}, ${r.result?.passesGate ? 'gate passed' : 'gate failed'})`,
+          })
+        }
+      } catch (e: any) {
+        setProcessingIds(s => { const n = new Set(s); n.delete(productId); return n })
+        setFlash({ kind: 'error', text: `${label}: ${e?.message || 'enrichment failed'}` })
+      }
+    })()
+  }, [queue])
 
   const doReenrich = useCallback(() => {
-    if (!selected || pending) return
-    const yes = confirm(`Re-run Claude enrichment on ${selected.make} ${selected.part_number}? Takes ~30–90 seconds. Will overwrite non-human-edited fields with fresh data.`)
+    if (!selected) return
+    if (processingIds.has(selected.id)) return
+    const yes = confirm(`Re-run Claude enrichment on ${selected.make} ${selected.part_number}? Takes ~30–90 seconds. Will overwrite non-human-edited fields with fresh data. The UI stays usable — you can keep working on other products while this runs.`)
     if (!yes) return
-    runReenrich({})
-  }, [selected, pending, runReenrich])
+    const label = `${selected.make} ${selected.part_number}`
+    runReenrichBackground(selected.id, label, {})
+    // Auto-advance so user keeps moving
+    goNext()
+  }, [selected, processingIds, runReenrichBackground, goNext])
 
   const doPullFromUrl = useCallback((url: string) => {
-    if (!selected || pending) return
+    if (!selected) return
+    if (processingIds.has(selected.id)) return
     const trimmed = url.trim()
     if (!trimmed) return
     try {
@@ -211,8 +267,10 @@ export default function ReviewWorkspace({ queue: initialQueue, totals: initialTo
       setFlash({ kind: 'error', text: 'That doesn\'t look like a valid URL' })
       return
     }
-    runReenrich({ starting_url: trimmed })
-  }, [selected, pending, runReenrich])
+    const label = `${selected.make} ${selected.part_number}`
+    runReenrichBackground(selected.id, label, { starting_url: trimmed })
+    goNext()
+  }, [selected, processingIds, runReenrichBackground, goNext])
 
   // ─── Find any product (escape hatch) ────────────────────────────────
   useEffect(() => {
@@ -319,6 +377,8 @@ export default function ReviewWorkspace({ queue: initialQueue, totals: initialTo
             queue={queue}
             selectedId={selectedId}
             onSelect={goTo}
+            processingIds={processingIds}
+            readyIds={readyIds}
           />
           <main>
             {selected ? (
@@ -338,6 +398,8 @@ export default function ReviewWorkspace({ queue: initialQueue, totals: initialTo
                 onReenrich={doReenrich}
                 onPullFromUrl={doPullFromUrl}
                 pending={pending}
+                isProcessing={processingIds.has(selected.id)}
+                isReady={readyIds.has(selected.id)}
                 hasEdits={hasEdits}
               />
             ) : (
@@ -417,40 +479,97 @@ function Dot() {
   return <span className="text-gray-300">·</span>
 }
 
-function QueueSidebar({ queue, selectedId, onSelect }: { queue: QueueItem[]; selectedId: string | null; onSelect: (id: string) => void }) {
+function QueueSidebar({ queue, selectedId, onSelect, processingIds, readyIds }: {
+  queue: QueueItem[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  processingIds: Set<string>
+  readyIds: Set<string>
+}) {
+  const processingCount = queue.filter(p => processingIds.has(p.id)).length
+  const readyCount = queue.filter(p => readyIds.has(p.id)).length
+
+  // Sort: processing first (so you can watch them), then "ready" (newly back),
+  // then everything else in alphabetical-ish order. This is the "separate
+  // location until ready to re-approve" behavior — they cluster at the top.
+  const ordered = useMemo(() => {
+    return [...queue].sort((a, b) => {
+      const aProc = processingIds.has(a.id) ? 0 : readyIds.has(a.id) ? 1 : 2
+      const bProc = processingIds.has(b.id) ? 0 : readyIds.has(b.id) ? 1 : 2
+      if (aProc !== bProc) return aProc - bProc
+      return 0  // preserve original order within bucket
+    })
+  }, [queue, processingIds, readyIds])
+
   return (
     <aside className="bg-white border border-gray-200 rounded-xl overflow-hidden sticky top-[68px] self-start max-h-[calc(100vh-90px)] flex flex-col">
       <div className="px-3 py-2 border-b border-gray-200 text-xs font-semibold text-gray-700 bg-gray-50 flex items-center justify-between">
         <span>Queue</span>
         <span className="text-gray-500">{queue.length} items</span>
       </div>
+      {(processingCount > 0 || readyCount > 0) && (
+        <div className="px-3 py-1.5 border-b border-gray-100 bg-blue-50/50 text-[10px] text-gray-600 flex gap-3">
+          {processingCount > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <Spinner /> {processingCount} processing
+            </span>
+          )}
+          {readyCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[#0072bc] font-medium">
+              ✨ {readyCount} ready
+            </span>
+          )}
+        </div>
+      )}
       <div className="overflow-y-auto flex-1">
         {queue.length === 0 ? (
           <div className="px-3 py-6 text-center text-xs text-gray-400">Queue is empty 🎉</div>
         ) : (
-          queue.map(p => (
-            <button
-              key={p.id}
-              onClick={() => onSelect(p.id)}
-              className={`block w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                p.id === selectedId ? 'bg-blue-50 border-l-4 border-l-[#0072bc] pl-2' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-[#0072bc] truncate">{p.make}</div>
-                  <div className="text-xs font-medium text-gray-900 truncate">{p.display_name || p.part_number}</div>
-                  <div className="text-[11px] text-gray-500 truncate">{p.part_number} · {p.category}</div>
+          ordered.map(p => {
+            const processing = processingIds.has(p.id)
+            const ready = readyIds.has(p.id)
+            return (
+              <button
+                key={p.id}
+                onClick={() => onSelect(p.id)}
+                className={`block w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                  p.id === selectedId ? 'bg-blue-50 border-l-4 border-l-[#0072bc] pl-2' :
+                  ready ? 'bg-blue-50/40' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-[#0072bc] truncate flex items-center gap-1.5">
+                      {processing && <Spinner />}
+                      {ready && <span className="text-[#0072bc]">✨</span>}
+                      <span>{p.make}</span>
+                    </div>
+                    <div className="text-xs font-medium text-gray-900 truncate">{p.display_name || p.part_number}</div>
+                    <div className="text-[11px] text-gray-500 truncate">{p.part_number} · {p.category}</div>
+                  </div>
+                  {processing ? (
+                    <span className="text-[10px] text-gray-500 italic shrink-0">working…</span>
+                  ) : ready ? (
+                    <span className="text-[10px] text-[#0072bc] bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full font-medium shrink-0">fresh data</span>
+                  ) : p.review_status === 'flagged' ? (
+                    <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full font-medium shrink-0">flagged</span>
+                  ) : null}
                 </div>
-                {p.review_status === 'flagged' && (
-                  <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full font-medium shrink-0">flagged</span>
-                )}
-              </div>
-            </button>
-          ))
+              </button>
+            )
+          })
         )}
       </div>
     </aside>
+  )
+}
+
+function Spinner() {
+  return (
+    <svg className="w-3 h-3 animate-spin text-[#0072bc]" fill="none" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+      <path d="M22 12a10 10 0 00-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
   )
 }
 
@@ -469,7 +588,7 @@ function EmptyState() {
 function ProductDetail({
   product, edits, onEdit, index, total,
   onPrev, onNext, onApprove, onReject, onFlag, onSave, onReenrich, onPullFromUrl,
-  pending, hasEdits,
+  pending, isProcessing, isReady, hasEdits,
 }: {
   product: QueueItem
   edits: EditableFields
@@ -479,10 +598,16 @@ function ProductDetail({
   onApprove: () => void; onReject: () => void; onFlag: () => void
   onSave: () => void; onReenrich: () => void
   onPullFromUrl: (url: string) => void
-  pending: boolean; hasEdits: boolean
+  pending: boolean
+  isProcessing: boolean
+  isReady: boolean
+  hasEdits: boolean
 }) {
   const [pullUrl, setPullUrl] = useState('')
   const [showPullInput, setShowPullInput] = useState(false)
+  // Buttons disabled when: an in-flight quick action is happening (`pending`),
+  // or THIS specific product is being re-enriched in the background.
+  const blockActions = pending || isProcessing
   const effective = (k: keyof EditableFields): any => (edits as any)[k] !== undefined ? (edits as any)[k] : (product as any)[k]
   const set = (k: keyof EditableFields, v: any) => onEdit({ ...edits, [k]: v })
 
@@ -500,6 +625,19 @@ function ProductDetail({
 
   return (
     <article className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      {isProcessing && (
+        <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-900 flex items-center gap-2">
+          <Spinner />
+          <span className="font-medium">Re-enriching this product…</span>
+          <span className="text-blue-700/70">It'll come back to the queue when ready. You can navigate to another product and keep working.</span>
+        </div>
+      )}
+      {isReady && !isProcessing && (
+        <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-900 flex items-center gap-2">
+          <span>✨</span>
+          <span className="font-medium">Fresh data pulled — please re-review.</span>
+        </div>
+      )}
       {/* Header: image + title + meta */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex gap-6">
@@ -636,39 +774,39 @@ function ProductDetail({
             >← Prev</button>
             <button
               onClick={onReject}
-              disabled={pending}
+              disabled={blockActions}
               className="text-xs px-3 py-1.5 rounded border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-40"
               title="Reject — hide from catalog (R)"
             >Reject</button>
             <button
               onClick={onFlag}
-              disabled={pending}
+              disabled={blockActions}
               className="text-xs px-3 py-1.5 rounded border border-amber-200 text-amber-700 hover:bg-amber-50 disabled:opacity-40"
               title="Flag for later (F)"
             >Flag</button>
             <button
               onClick={onReenrich}
-              disabled={pending}
+              disabled={blockActions}
               className="text-xs px-3 py-1.5 rounded border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
               title="Re-run Claude enrichment (open web search)"
             >↻ Re-enrich</button>
             <button
               onClick={() => setShowPullInput(s => !s)}
-              disabled={pending}
+              disabled={blockActions}
               className={`text-xs px-3 py-1.5 rounded border disabled:opacity-40 ${showPullInput ? 'bg-blue-50 border-[#0072bc] text-[#0072bc]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
               title="Paste a URL to extract from a specific page"
             >🔗 From URL</button>
             {hasEdits && (
               <button
                 onClick={onSave}
-                disabled={pending}
+                disabled={blockActions}
                 className="text-xs px-3 py-1.5 rounded border border-[#0072bc] text-[#0072bc] hover:bg-blue-50 font-semibold disabled:opacity-40"
                 title="Save edits (⌘S)"
               >Save edits</button>
             )}
             <button
               onClick={onApprove}
-              disabled={pending}
+              disabled={blockActions}
               className="text-xs px-4 py-1.5 rounded bg-[#0072bc] text-white hover:bg-[#005b95] font-semibold disabled:opacity-40 inline-flex items-center gap-1"
               title="Approve (A)"
             >
@@ -705,7 +843,7 @@ function ProductDetail({
                 onChange={e => setPullUrl(e.target.value)}
                 placeholder="https://www.toro.com/en/product/77502"
                 autoFocus
-                disabled={pending}
+                disabled={blockActions}
                 className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#0072bc] focus:border-transparent disabled:opacity-50"
               />
               <button
@@ -718,7 +856,7 @@ function ProductDetail({
               <button
                 type="button"
                 onClick={() => { setShowPullInput(false); setPullUrl('') }}
-                disabled={pending}
+                disabled={blockActions}
                 className="text-xs px-2 py-1.5 text-gray-500 hover:text-gray-900"
               >
                 Cancel
