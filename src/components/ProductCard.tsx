@@ -20,7 +20,7 @@ export default function ProductCard({ product }: Props) {
         {product.image_url ? (
           <Image
             src={product.image_url}
-            alt={product.display_name || `${product.make} ${product.model}`}
+            alt={product.display_name || `${product.make} ${product.part_number}`}
             fill
             className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -53,9 +53,9 @@ export default function ProductCard({ product }: Props) {
           {product.make}
         </div>
         <h3 className="font-bold text-gray-900 text-sm leading-snug mb-1 group-hover:text-[#0072bc] transition-colors line-clamp-2">
-          {product.display_name || `${product.make} ${product.model}`}
+          {product.display_name || `${product.make} ${product.part_number}`}
         </h3>
-        <div className="text-xs text-gray-500 mb-3">Model: {product.model}</div>
+        <div className="text-xs text-gray-500 mb-3">Model #: {product.part_number}</div>
 
         {/* Short description */}
         {product.short_description && (

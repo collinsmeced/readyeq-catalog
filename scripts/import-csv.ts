@@ -12,7 +12,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { createClient } from '@supabase/supabase-js'
-import { cleanCategory, makeSlug, CATEGORY_MAP } from '../src/lib/types'
+import { cleanCategory, makeBaseSlug, CATEGORY_MAP } from '../src/lib/types'
 
 // Load env from .env.local
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') })
@@ -76,10 +76,11 @@ async function main() {
   const rows: FlyntlokRow[] = parseFile(filePath)
   console.log(`Raw rows: ${rows.length}`)
 
-  // ---- Aggregate by make + model ----
+  // ---- Aggregate by make + part_number ----
+  // Flyntlok's CSV column header is "Model" but the value is a SKU / part number.
   const productMap = new Map<string, {
     make: string
-    model: string
+    part_number: string
     category: string
     condition: string
     list_price_cents: number
@@ -91,17 +92,17 @@ async function main() {
 
   for (const row of rows) {
     const make = (row.Make || '').trim()
-    const model = (row.Model || '').trim()
+    const part_number = (row.Model || '').trim()
     const primaryClass = (row['Primary Class'] || '').trim()
     const status = (row.Status || '').trim()
 
-    if (!make || !model) { skipped++; continue }
+    if (!make || !part_number) { skipped++; continue }
 
     // Skip non-product categories
     const category = cleanCategory(primaryClass)
     if (!category) { skipped++; continue }
 
-    const key = `${make.toLowerCase()}||${model.toLowerCase()}`
+    const key = `${make.toLowerCase()}||${part_number.toLowerCase()}`
     const price = typeof row['List Price'] === 'number'
       ? Math.round(row['List Price'] * 100)
       : 0
@@ -110,7 +111,7 @@ async function main() {
     if (!existing) {
       productMap.set(key, {
         make,
-        model,
+        part_number,
         category,
         condition: row['Acquisition Type'] === 'New' ? 'New' : 'Pre-Owned',
         list_price_cents: price,
@@ -137,8 +138,8 @@ async function main() {
 
     const upsertRows = batch.map(p => ({
       make: p.make,
-      model: p.model,
-      slug: makeSlug(p.make, p.model),
+      part_number: p.part_number,
+      slug: makeBaseSlug(p.make, p.part_number),
       category: p.category,
       condition: p.condition,
       list_price_cents: p.list_price_cents,

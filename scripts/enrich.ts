@@ -24,10 +24,13 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
+// NOTE: This is the legacy memory-grounded enrichment script. It will be
+// replaced wholesale by the v1.4 web-grounded pipeline in Phase 1.
+// Kept here only to keep the existing npm script working in the interim.
 interface Product {
   id: string
   make: string
-  model: string
+  part_number: string
   category: string
   condition: string
   list_price_cents: number
@@ -51,7 +54,7 @@ async function enrichProduct(p: Product): Promise<Enrichment> {
 
 Product:
 - Make: ${p.make}
-- Model: ${p.model}
+- Part #: ${p.part_number}
 - Category: ${p.category}
 - Condition: ${p.condition}
 - List Price: ${price}
@@ -90,11 +93,11 @@ Rules:
     const clean = text.replace(/^```json?\n?/i, '').replace(/\n?```$/i, '').trim()
     return JSON.parse(clean)
   } catch {
-    console.error(`  Parse error for ${p.make} ${p.model}:`, text.slice(0, 100))
+    console.error(`  Parse error for ${p.make} ${p.part_number}:`, text.slice(0, 100))
     return {
-      display_name: `${p.make} ${p.model}`,
-      short_description: `${p.make} ${p.model} — available from Ready Equipment in Meredith, NH.`,
-      description: `The ${p.make} ${p.model} is available at Ready Equipment. Contact us for specifications and pricing.`,
+      display_name: `${p.make} ${p.part_number}`,
+      short_description: `${p.make} ${p.part_number} — available from Ready Equipment in Meredith, NH.`,
+      description: `The ${p.make} ${p.part_number} is available at Ready Equipment. Contact us for specifications and pricing.`,
       specs: {},
       features: [],
       product_page_url: null
@@ -150,13 +153,13 @@ async function processProduct(p: Product): Promise<void> {
       .eq('id', p.id)
 
     if (error) {
-      console.error(`  DB error for ${p.make} ${p.model}:`, error.message)
+      console.error(`  DB error for ${p.make} ${p.part_number}:`, error.message)
     } else {
       const imgStatus = imageUrl ? '📸' : '  '
       console.log(`  ${imgStatus} ${enrichment.display_name}`)
     }
   } catch (err: any) {
-    console.error(`  Error enriching ${p.make} ${p.model}:`, err.message)
+    console.error(`  Error enriching ${p.make} ${p.part_number}:`, err.message)
   }
 }
 
@@ -165,7 +168,7 @@ async function main() {
 
   const { data: products, error } = await supabase
     .from('products')
-    .select('id, make, model, category, condition, list_price_cents')
+    .select('id, make, part_number, category, condition, list_price_cents')
     .is('enriched_at', null)
     .eq('is_active', true)
     .order('make')

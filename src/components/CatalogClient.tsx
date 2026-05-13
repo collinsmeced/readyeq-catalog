@@ -59,7 +59,8 @@ export default function CatalogClient({ products, initialCategory = null }: Prop
       const q = search.toLowerCase()
       result = result.filter(p =>
         p.make.toLowerCase().includes(q) ||
-        p.model.toLowerCase().includes(q) ||
+        p.part_number.toLowerCase().includes(q) ||
+        (p.series || '').toLowerCase().includes(q) ||
         (p.display_name || '').toLowerCase().includes(q) ||
         (p.description || '').toLowerCase().includes(q) ||
         p.category.toLowerCase().includes(q)

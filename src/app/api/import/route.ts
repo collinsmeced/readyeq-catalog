@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { cleanCategory, makeSlug } from '@/lib/types'
+import { cleanCategory, makeBaseSlug } from '@/lib/types'
 
 function deriveAvailability(avail: number, onOrder: number): string {
   if (avail > 0) return 'in_stock'
@@ -36,9 +36,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Could not parse file. Upload a .xlsx, .xls, or .csv.' }, { status: 400 })
   }
 
-  // Aggregate by make + model
+  // Aggregate by make + part_number (Flyntlok's CSV column is named "Model"
+  // but the value is a part_number / SKU; we map it to part_number on import)
   const productMap = new Map<string, {
-    make: string; model: string; category: string; condition: string
+    make: string; part_number: string; category: string; condition: string
     list_price_cents: number; units_available: number; units_on_order: number
   }>()
 
@@ -46,24 +47,24 @@ export async function POST(req: NextRequest) {
 
   for (const row of rows) {
     const make = String(row['Make'] || '').trim()
-    const model = String(row['Model'] || '').trim()
+    const part_number = String(row['Model'] || '').trim()
     const primaryClass = String(row['Primary Class'] || '').trim()
     const status = String(row['Status'] || '').trim()
     const acquisitionType = String(row['Acquisition Type'] || '').trim()
 
-    if (!make || !model) { skipped++; continue }
+    if (!make || !part_number) { skipped++; continue }
 
     const category = cleanCategory(primaryClass)
     if (!category) { skipped++; continue }
 
-    const key = `${make.toLowerCase()}||${model.toLowerCase()}`
+    const key = `${make.toLowerCase()}||${part_number.toLowerCase()}`
     const rawPrice = row['List Price']
     const price = typeof rawPrice === 'number' ? Math.round(rawPrice * 100) : 0
 
     const existing = productMap.get(key)
     if (!existing) {
       productMap.set(key, {
-        make, model, category,
+        make, part_number, category,
         condition: acquisitionType === 'New' ? 'New' : 'Pre-Owned',
         list_price_cents: price,
         units_available: status === 'Avail' ? 1 : 0,
@@ -86,8 +87,8 @@ export async function POST(req: NextRequest) {
     const batch = products.slice(i, i + BATCH)
     const upsertRows = batch.map(p => ({
       make: p.make,
-      model: p.model,
-      slug: makeSlug(p.make, p.model),
+      part_number: p.part_number,
+      slug: makeBaseSlug(p.make, p.part_number),
       category: p.category,
       condition: p.condition,
       list_price_cents: p.list_price_cents,

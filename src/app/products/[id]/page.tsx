@@ -34,8 +34,8 @@ export async function generateMetadata({ params }: Props) {
   const product = await getProduct(id)
   if (!product) return {}
   return {
-    title: `${product.display_name || `${product.make} ${product.model}`} | Ready Equipment`,
-    description: product.short_description || `${product.make} ${product.model} — available from Ready Equipment in Meredith, NH.`,
+    title: `${product.display_name || `${product.make} ${product.part_number}`} | Ready Equipment`,
+    description: product.short_description || `${product.make} ${product.part_number} — available from Ready Equipment in Meredith, NH.`,
   }
 }
 
@@ -64,7 +64,7 @@ export default async function ProductPage({ params }: Props) {
           {product.category}
         </Link>
         <span>/</span>
-        <span className="text-gray-900 font-medium">{product.model}</span>
+        <span className="text-gray-900 font-medium">{product.part_number}</span>
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -75,7 +75,7 @@ export default async function ProductPage({ params }: Props) {
             {allImages.length > 0 ? (
               <Image
                 src={allImages[0]}
-                alt={product.display_name || `${product.make} ${product.model}`}
+                alt={product.display_name || `${product.make} ${product.part_number}`}
                 fill
                 className="object-contain p-6"
                 sizes="(max-width: 1024px) 100vw, 50vw"
@@ -109,9 +109,9 @@ export default async function ProductPage({ params }: Props) {
             {product.make}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight mb-2">
-            {product.display_name || `${product.make} ${product.model}`}
+            {product.display_name || `${product.make} ${product.part_number}`}
           </h1>
-          <div className="text-sm text-gray-500 mb-4">Model # {product.model}</div>
+          <div className="text-sm text-gray-500 mb-4">Model #: {product.part_number}</div>
 
           {/* Availability + condition */}
           <div className="flex items-center gap-2 mb-5">
@@ -143,7 +143,7 @@ export default async function ProductPage({ params }: Props) {
               Call (603) 279-7323
             </a>
             <a
-              href={`https://www.readyeq.com/contact-us?product=${encodeURIComponent(`${product.make} ${product.model}`)}`}
+              href={`https://www.readyeq.com/contact-us?product=${encodeURIComponent(`${product.make} ${product.part_number}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-secondary justify-center sm:justify-start"

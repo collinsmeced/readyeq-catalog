@@ -1,13 +1,25 @@
 export type Availability = 'in_stock' | 'on_order' | 'available_to_order' | 'discontinued'
 export type Condition = 'New' | 'Pre-Owned' | 'Trade-In'
 export type ProductSource = 'inventory' | 'catalog'
+export type ReviewStatus = 'unreviewed' | 'enriched' | 'approved' | 'flagged' | 'rejected'
+
+export interface EnrichmentAttempt {
+  at: string                    // ISO timestamp
+  source_url: string | null
+  confidence: 'high' | 'medium' | 'low'
+  confidence_notes: string
+  ok: boolean
+  error?: string
+}
 
 export interface Product {
   id: string
   make: string
-  model: string
+  part_number: string             // RENAMED from `model` in migration 002
+  series: string | null           // NEW — marketing family name (e.g. "TimeMaster")
   display_name: string | null
   slug: string | null
+  legacy_slugs: string[]          // NEW — for SEO-stable redirects when slug format changes
   description: string | null
   short_description: string | null
   specs: Record<string, string>
@@ -22,10 +34,30 @@ export interface Product {
   source: ProductSource
   image_url: string | null
   images: string[]
+
+  // Review workflow (NEW in migration 002)
+  review_status: ReviewStatus
+  source_url: string | null
+  source_snapshot: string | null
+  human_edited_fields: string[]
+  approved_at: string | null
+  approved_by: string | null
+  enrichment_log: EnrichmentAttempt[]
+
   is_featured: boolean
   is_active: boolean
   enriched_at: string | null
   created_at: string
+  updated_at: string
+}
+
+export interface ManufacturerBrand {
+  brand: string
+  domain: string
+  aliases: string[]
+  search_template: string | null
+  notes: string | null
+  added_at: string
   updated_at: string
 }
 
@@ -111,9 +143,26 @@ export function availabilityColor(a: Availability): string {
   }
 }
 
-export function makeSlug(make: string, model: string): string {
-  return `${make}-${model}`
+// Base slug: just make + part_number. Stable identifier — does not change
+// when series is added later. Existing rows in the DB use this format.
+export function makeBaseSlug(make: string, part_number: string): string {
+  return `${make}-${part_number}`
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
+
+// SEO slug: includes series when known (e.g. "toro-timemaster-77502").
+// Used for new rows and Phase 5 slug regeneration. Old slug saved in
+// legacy_slugs[] when this is adopted, so existing links never 404.
+export function makeSeoSlug(make: string, series: string | null, part_number: string): string {
+  const parts = [make, series, part_number].filter(Boolean) as string[]
+  return parts.join('-')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+// Back-compat alias — existing callers use makeSlug(make, model).
+// Behavior is identical to makeBaseSlug. Remove once all callers migrate.
+export const makeSlug = makeBaseSlug
