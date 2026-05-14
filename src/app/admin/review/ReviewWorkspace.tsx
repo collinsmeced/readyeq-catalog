@@ -346,9 +346,12 @@ export default function ReviewWorkspace({ queue: initialQueue, totals: initialTo
   }, [goNext, goPrev, doApprove, doReject, doFlag, doSave, showSearch])
 
   // ─── Flash auto-dismiss ─────────────────────────────────────────────
+  // Errors persist 12s (often have actionable info Mike needs to read);
+  // success/info dismiss in 3s.
   useEffect(() => {
     if (!flash) return
-    const handle = setTimeout(() => setFlash(null), 2500)
+    const ms = flash.kind === 'error' ? 12_000 : 3_000
+    const handle = setTimeout(() => setFlash(null), ms)
     return () => clearTimeout(handle)
   }, [flash])
 
@@ -362,12 +365,19 @@ export default function ReviewWorkspace({ queue: initialQueue, totals: initialTo
       />
 
       {flash && (
-        <div className={`fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg text-sm font-medium shadow-md ${
+        <div className={`fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg text-sm font-medium shadow-md max-w-2xl ${
           flash.kind === 'success' ? 'bg-green-100 text-green-900 border border-green-200'
           : flash.kind === 'error' ? 'bg-red-100 text-red-900 border border-red-200'
           : 'bg-blue-50 text-blue-900 border border-blue-200'
         }`}>
-          {flash.text}
+          <div className="flex items-start gap-3">
+            <span className="flex-1 whitespace-pre-wrap leading-snug">{flash.text}</span>
+            <button
+              onClick={() => setFlash(null)}
+              className="text-current opacity-50 hover:opacity-100 text-base leading-none -mt-0.5"
+              title="Dismiss"
+            >×</button>
+          </div>
         </div>
       )}
 

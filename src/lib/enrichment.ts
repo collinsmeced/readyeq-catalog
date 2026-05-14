@@ -142,6 +142,7 @@ export interface EnrichmentAttemptLog {
   input: EnrichmentInput
   source_url: string | null
   confidence: 'high' | 'medium' | 'low' | null
+  confidence_notes: string          // Claude's reasoning — surface in UI on failure
   discontinued: boolean
   passes_gate: boolean
   parse_error: string | null
@@ -275,6 +276,7 @@ Find the manufacturer page and extract per the system instructions. Return ONLY 
     input,
     source_url: parsed?.source_url || null,
     confidence: parsed?.confidence ?? null,
+    confidence_notes: parsed?.confidence_notes ?? '',
     discontinued: parsed?.discontinued ?? false,
     passes_gate: passesGate,
     parse_error: parseError,

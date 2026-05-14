@@ -150,7 +150,14 @@ export async function reenrichProduct(
 ): Promise<{
   ok: boolean
   error?: string
-  result?: { confidence: string; passesGate: boolean; reviewStatus: string }
+  result?: {
+    confidence: string
+    passesGate: boolean
+    reviewStatus: string
+    confidence_notes: string
+    extractedAnything: boolean    // false when Claude's content fields are all empty
+                                  // (e.g. JS-rendered page that web_fetch can't read)
+  }
 }> {
   await requireAdmin()
   try {
@@ -192,6 +199,42 @@ export async function reenrichProduct(
     const protectedSet = new Set<string>(row.human_edited_fields ?? [])
     const writeIf = (field: string, newValue: any, oldValue: any) =>
       protectedSet.has(field) ? oldValue : newValue
+
+    // Detect "extraction produced nothing useful" — most common when the
+    // user pasted a URL on a JS-rendered SPA (shop.exmark.com, some
+    // Salesforce Commerce sites). Without this, the fallback writes nothing
+    // new and silently surfaces a "ready for re-review" toast — confusing.
+    const extractedAnything = !!(e && (
+      e.display_name?.trim() ||
+      e.description?.trim() ||
+      e.short_description?.trim() ||
+      (e.specs && Object.keys(e.specs).length > 0) ||
+      (e.features && e.features.length > 0) ||
+      e.image_url?.trim()
+    ))
+
+    // If a starting_url was provided BUT extraction produced nothing,
+    // log the attempt and return a clear error with Claude's reason —
+    // don't pollute the product fields with a no-op "re-review" badge.
+    if (options?.starting_url && e && !e.discontinued && !extractedAnything) {
+      await db().query(
+        `UPDATE products SET enrichment_log = $1::jsonb WHERE id = $2`,
+        [JSON.stringify(newLog), productId],
+      )
+      return {
+        ok: false,
+        error: e.confidence_notes
+          ? `Pulled the URL but couldn't extract anything. Claude's reason: ${e.confidence_notes}`
+          : 'Pulled the URL but the page appears empty or JavaScript-rendered. web_fetch can\'t see content that loads via JS. Try a different URL (manufacturer\'s main site, not a shop/SPA).',
+        result: {
+          confidence: 'low',
+          passesGate: false,
+          reviewStatus: row.review_status,
+          confidence_notes: e.confidence_notes ?? '',
+          extractedAnything: false,
+        },
+      }
+    }
 
     let fields: Record<string, any>
     let reason: string
@@ -267,6 +310,8 @@ export async function reenrichProduct(
         confidence: e?.confidence ?? 'low',
         passesGate: result.passes_gate,
         reviewStatus: fields.review_status ?? 'enriched',
+        confidence_notes: e?.confidence_notes ?? '',
+        extractedAnything,
       },
     }
   } catch (e: any) {
